@@ -46,6 +46,7 @@ class VGG(nn.Module):
         x = self.features_conv(x)
         # register the hook
         h = x.register_hook(self.activations_hook)
+        
         # apply the remaining pooling
         x = self.max_pool(x)
         x = x.view((1, -1))
@@ -92,7 +93,7 @@ activations = vgg.get_activations(img).detach()
 
 # weight the channels by corresponding gradients
 # for i in range(512):
-for i in range(len(activations[1])):
+for i in range(512):
     activations[:, i, :, :] *= pooled_gradients[i]
 
 # average the channels of the activations
@@ -113,8 +114,7 @@ heatmap = np.uint8(255 * heatmap)
 
 
 heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
-
-superimposed_img = heatmap * 0.4 + img
+superimposed_img = heatmap * 0.7 + img
 
 cv2.imwrite('./aa.jpg',superimposed_img)
 
