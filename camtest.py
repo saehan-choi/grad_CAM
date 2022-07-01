@@ -7,6 +7,8 @@ from torchvision import datasets
 import matplotlib.pyplot as plt
 import numpy as np
 
+import cv2
+
 
 # use the ImageNet transformation
 transform = transforms.Compose([transforms.Resize((224, 224)), 
@@ -24,7 +26,7 @@ dataloader = data.DataLoader(dataset=dataset, shuffle=False, batch_size=1)
 class VGG(nn.Module):
     def __init__(self):
         super(VGG, self).__init__()
-        
+
         # get the pretrained VGG19 network
         self.vgg = vgg19(pretrained=True)
         # disect the network to access its last convolutional layer
@@ -42,10 +44,8 @@ class VGG(nn.Module):
 
     def forward(self, x):
         x = self.features_conv(x)
-        
         # register the hook
         h = x.register_hook(self.activations_hook)
-
         # apply the remaining pooling
         x = self.max_pool(x)
         x = x.view((1, -1))
@@ -55,7 +55,7 @@ class VGG(nn.Module):
     # method for the gradient extraction
     def get_activations_gradient(self):
         return self.gradients
-    
+
     # method for the activation exctraction
     def get_activations(self, x):
         return self.features_conv(x)
@@ -74,40 +74,47 @@ pred = vgg(img)
 
 argmax = pred.argmax().item()
 # get the gradient of the output with respect to the parameters of the model
+print(f'{argmax}로 예측하였습니다.')
 pred[:, argmax].backward()
 
 # pull the gradients out of the model
 gradients = vgg.get_activations_gradient()
 
 # pool the gradients across the channels
+# 이거 adaptive avg pooling (1,1) 으로 바꾸어도 똑같이 동작합니다.
 pooled_gradients = torch.mean(gradients, dim=[0, 2, 3])
 
 # get the activations of the last convolutional layer
 activations = vgg.get_activations(img).detach()
 
+# print(activations.size())
+# [1,512,14,14]
+
 # weight the channels by corresponding gradients
-for i in range(512):
+# for i in range(512):
+for i in range(len(activations[1])):
     activations[:, i, :, :] *= pooled_gradients[i]
-    
+
 # average the channels of the activations
 heatmap = torch.mean(activations, dim=1).squeeze()
 
 # relu on top of the heatmap
 # expression (2) in https://arxiv.org/pdf/1610.02391.pdf
-heatmap = np.maximum(heatmap, 0)
+heatmap = torch.clamp(heatmap, min=0)
 
 # normalize the heatmap
 heatmap /= torch.max(heatmap)
+heatmap = np.array(heatmap)
 
-# draw the heatmap
-plt.matshow(heatmap.squeeze())
-# plt.show()
+img = cv2.imread('./data/Elephant/1_kc-k_j53HOJH_sifhg4lHg.jpeg')
 
-
-
-# import timm
+heatmap = cv2.resize(heatmap, dsize=(img.shape[1], img.shape[0]))
+heatmap = np.uint8(255 * heatmap)
 
 
-# model = timm.create_model('efficient-b0')
+heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
 
-# print(model)
+superimposed_img = heatmap * 0.4 + img
+
+cv2.imwrite('./aa.jpg',superimposed_img)
+
