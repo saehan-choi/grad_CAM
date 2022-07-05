@@ -46,7 +46,7 @@ class VGG(nn.Module):
         x = self.features_conv(x)
         # register the hook
         h = x.register_hook(self.activations_hook)
-        
+
         # apply the remaining pooling
         x = self.max_pool(x)
         x = x.view((1, -1))
@@ -60,6 +60,7 @@ class VGG(nn.Module):
     # method for the activation exctraction
     def get_activations(self, x):
         return self.features_conv(x)
+
 
 # initialize the VGG model
 vgg = VGG()
@@ -83,7 +84,7 @@ gradients = vgg.get_activations_gradient()
 
 # pool the gradients across the channels
 # 이거 adaptive avg pooling (1,1) 으로 바꾸어도 똑같이 동작합니다.
-pooled_gradients = torch.mean(gradients, dim=[0, 2, 3])
+pooled_gradients = torch.mean(gradients, dim=[0, 2, 3], keepdim=True)
 
 # get the activations of the last convolutional layer
 activations = vgg.get_activations(img).detach()
@@ -92,9 +93,7 @@ activations = vgg.get_activations(img).detach()
 # [1,512,14,14]
 
 # weight the channels by corresponding gradients
-# for i in range(512):
-for i in range(512):
-    activations[:, i, :, :] *= pooled_gradients[i]
+activations = activations * pooled_gradients
 
 # average the channels of the activations
 heatmap = torch.mean(activations, dim=1).squeeze()
@@ -107,9 +106,10 @@ heatmap = torch.clamp(heatmap, min=0)
 heatmap /= torch.max(heatmap)
 heatmap = np.array(heatmap)
 
-img = cv2.imread('./data/Elephant/1_kc-k_j53HOJH_sifhg4lHg.jpeg')
+img = cv2.imread('./elephant.jpg')
 
 heatmap = cv2.resize(heatmap, dsize=(img.shape[1], img.shape[0]))
+print(heatmap)
 heatmap = np.uint8(255 * heatmap)
 
 
