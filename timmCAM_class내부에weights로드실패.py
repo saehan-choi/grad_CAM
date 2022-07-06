@@ -20,33 +20,38 @@ class CFG:
                             ToTensorV2()
                             ])
     
-class Model(nn.Module):
-    def __init__(self):
-        super(Model, self).__init__()
-        self.model = timm.create_model('efficientnet_b0', num_classes=CFG.classes)
-        self.model.load_state_dict = torch.load(CFG.weights_path)
+# class Model(nn.Module):
+#     def __init__(self):
+#         super(Model, self).__init__()
+#         self.model = timm.create_model('efficientnet_b0', num_classes=CFG.classes)
+#         self.model.load_state_dict = torch.load(CFG.weights_path)
         
-    def forward(self, x):
-        return self.model(x)
+#     def forward(self, x):
+#         return self.model(x)
     
-model = Model()
-model.load_state_dict(torch.load(CFG.weights_path))
-model.to(CFG.device)
+# model = Model()
+# model.load_state_dict(torch.load(CFG.weights_path))
+# model.to(CFG.device)
 
 class efficient(nn.Module):
     def __init__(self):
         super(efficient, self).__init__()
 
-        self.model = model
-        self.model.load_state_dict = torch.load(CFG.weights_path)
-        print(self.model.load_state_dict)
+        self.model = timm.create_model('efficientnet_b0', num_classes=CFG.classes)
+        print(self.model)
+        # self.model.load_state_dict(torch.load(CFG.weights_path))
+        # self.model.load_state_dict(torch.load(CFG.weights_path), strict=False)
+        # print(self.model.state_dict())
+        
+        # print(self.model.load_state_dict(torch.load(CFG.weights_path)))
+        # self.model.state_dict() = torch.load(CFG.weights_path)
 
-        self.global_pool = self.model.model.global_pool
-        self.classifier = self.model.model.classifier
+        self.global_pool = self.model.global_pool
+        self.classifier = self.model.classifier
 
         self.model.global_pool = nn.Identity()
         self.model.classifier = nn.Identity()
-        print(self.model)
+        # print(self.model)
         self.gradient = None
 
     def activations_hook(self, grad):
@@ -60,6 +65,7 @@ class efficient(nn.Module):
 
     def forward(self, x):
         x = self.model(x)
+
         h = x.register_hook(self.activations_hook)
         # -> gradient 생성
         x = self.global_pool(x)
@@ -77,23 +83,10 @@ def img_transform(img):
 
 randn = torch.ones(1,3,256,256)
 
-# model.eval()
-output = efficient()
-output = output(randn)
 
-print(output)
-
-# print(type(kk))
+model = efficient()
 
 
-# with torch.no_grad():
-#     modelE.eval()
+model.eval()
 
-    
-#     pred = modelE(randn)
-#     argmax = pred.argmax().item()
-#     print(f'{CFG.clsarr[argmax]}로 예측하였습니다.')
-
-#     print(pred.size())
-#     pred[:, argmax].backward()
-#     gradients = modelE.get_activations_gradient()
+output = model(randn)

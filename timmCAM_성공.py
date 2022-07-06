@@ -109,6 +109,8 @@ for i in range(len(labels)):
     output[:, pred].backward()
     gradients = modelE.get_activations_gradient()
     pooled_gradients = torch.mean(gradients, dim=[0, 2, 3], keepdim=True)
+    
+    
     # get the activations of the last convolutional layer
     activations = modelE.get_activations(image).detach()
     # weight the channels by corresponding gradients
@@ -139,6 +141,12 @@ for i in range(len(labels)):
     # print(superimposed_img)
     img_name = datapath.split('/')[3]
     
-    cv2.imwrite(CFG.write_path+img_name, superimposed_img)
+    if original_label!=CFG.clsarr[pred]:
+        error_path = './error_results/'
+        cv2.imwrite(error_path+img_name, superimposed_img)
+    else:
+        pass
+    # 정상 이미지 저장
+    # cv2.imwrite(CFG.write_path+img_name, superimposed_img)
     
     
