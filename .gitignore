@@ -2,3 +2,6 @@
 /results
 /data
 /error_results
+
+
+# 이미 올라간 폴더 지울떄는 git rm --cached -r error_results/ 이런식으로 하면됩니다.
